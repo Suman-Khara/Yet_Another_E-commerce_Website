@@ -34,7 +34,7 @@ const routes = [
   { path: "/seller/profile/:storeName", name: "SellerProfile", component: SellerProfile },
 
   // Delivery Profile
-  { path: "/delivery/profile/:deliveryId", name: "DeliveryProfile", component: DeliveryProfile },
+  { path: "/delivery/profile/:username", name: "DeliveryProfile", component: DeliveryProfile },
 ];
 const router = createRouter({
   history: createWebHistory(),

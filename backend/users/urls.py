@@ -13,4 +13,10 @@ urlpatterns = [
     path("login/seller", seller_login, name="seller_login"),
     path("seller/profile/<str:store_name>/", seller_profile, name="seller_profile"),
     path("seller/profile/update/<str:store_name>/", update_seller_profile, name="update_seller_profile"),
+
+    # Delivery Partner Endpoints
+    path('signup/delivery', delivery_signup, name='delivery-signup'),
+    path("login/delivery", delivery_login, name="delivery_login"),
+    path("delivery/profile/<str:username>/", delivery_profile, name="delivery_profile"),
+    path("delivery/profile/update/<str:username>/", update_delivery_profile, name="update_delivery_profile"),
 ]

@@ -119,3 +119,62 @@ def update_seller_profile(request, store_name):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def delivery_signup(request):
+    print("Received data:", request.data)  # Log incoming data
+    serializer = DeliveryPartnerSignUpSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Signup successful!"}, status=status.HTTP_201_CREATED)
+    
+    print("Signup errors:", serializer.errors)  # Log errors
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["POST"])
+def delivery_login(request):
+    serializer = DeliveryPartnerLoginSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.validated_data["user"]
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response(
+            {
+                "token": token.key,
+                "username": user.username,  # Include username in response
+            },
+            status=status.HTTP_200_OK,
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def delivery_profile(request, username):
+    try:
+        delivery_partner = DeliveryPartner.objects.get(user__username=username)
+        serializer = DeliveryPartnerProfileSerializer(delivery_partner)
+        return Response(serializer.data)
+    except DeliveryPartner.DoesNotExist:
+        return Response({"error": "Delivery partner not found"}, status=404)
+
+@api_view(['PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_delivery_profile(request, username):
+    try:
+        delivery_partner = DeliveryPartner.objects.get(user__username=username)
+
+        # Ensure the authenticated user is the owner of the profile
+        if request.user != delivery_partner.user:
+            return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = DeliveryPartnerProfileSerializer(delivery_partner, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    except DeliveryPartner.DoesNotExist:
+        return Response({"error": "Delivery partner not found"}, status=404)
