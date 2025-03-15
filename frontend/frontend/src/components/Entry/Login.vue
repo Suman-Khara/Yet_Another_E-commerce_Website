@@ -1,13 +1,13 @@
 <template>
   <div class="login">
     <h2>Log In as:</h2>
-    <router-link to="/login/customer">
+    <router-link to="/customer/login">
       <button>Customer</button>
     </router-link>
-    <router-link to="/login/seller">
+    <router-link to="/seller/login">
       <button>Seller</button>
     </router-link>
-    <router-link to="/login/delivery">
+    <router-link to="/delivery/login">
       <button>Delivery Partner</button>
     </router-link>
   </div>

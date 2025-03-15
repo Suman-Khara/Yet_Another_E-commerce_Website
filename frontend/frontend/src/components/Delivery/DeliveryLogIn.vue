@@ -1,8 +1,8 @@
 <template>
   <div class="login-container">
-    <h2>Seller Login</h2>
+    <h2>Delivery Partner Login</h2>
     <form @submit.prevent="login">
-      <input type="email" v-model="store_email" placeholder="Store Email" required />
+      <input type="email" v-model="email" placeholder="Email" required />
       <input type="password" v-model="password" placeholder="Password" required />
       <button type="submit">Log In</button>
       <p v-if="error" class="error">{{ error }}</p>
@@ -16,7 +16,7 @@ import axios from 'axios';
 export default {
   data() {
     return {
-      store_email: '',
+      email: '',
       password: '',
       error: ''
     };
@@ -24,21 +24,18 @@ export default {
   methods: {
     async login() {
       try {
-        const response = await axios.post("http://127.0.0.1:8000/user/login/seller", {
-          store_email: this.store_email,
+        const response = await axios.post("http://127.0.0.1:8000/user/delivery/login/", {
+          email: this.email,
           password: this.password
         });
-
         alert("Login Successful!");
         console.log(response.data);
-
-        // Store token and store_name in localStorage
+        // Store token in localStorage or Vuex for authentication
         localStorage.setItem("token", response.data.token);
-        localStorage.setItem("store_name", response.data.store_name);  // 🔹 Add this line
-
-        this.$router.push(`/seller/profile/${response.data.store_name}`);
+        localStorage.setItem("username", response.data.username);
+        this.$router.push(`/delivery/profile/${response.data.username}`);
       } catch (err) {
-        this.error = "Invalid store email or password";
+        this.error = "Invalid email or password";
       }
     }
   }
@@ -48,13 +45,13 @@ export default {
 <style scoped>
 /* Main container */
 .login-container {
-  width: 100%;
-  max-width: 600px;
-  margin: 5vh auto;
-  padding: 3rem;
-  background: rgb(35, 35, 35);
+  width: 100%; /* Responsive width */
+  max-width: 600px; /* Prevents stretching too wide */
+  margin: 5vh auto; /* Centers the form with space on all sides */
+  padding: 3rem; /* Spacing inside the container */
+  background: rgb(35, 35, 35); /* Slightly greyish background */
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,255,170,255);
+  box-shadow: 0 4px 15px rgba(0,255,170,255); /* Faint white shadow */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -65,11 +62,11 @@ form {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1rem; /* Equal spacing between elements */
 }
 
-/* Input fields */
-input {
+/* Input fields & Textarea */
+input, textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #666;

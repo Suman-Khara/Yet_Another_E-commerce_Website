@@ -3,13 +3,14 @@ import { ref } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
-const router = useRouter();
+const router = useRouter();  // Initialize Vue Router
 
-const username = ref('');
-const email = ref('');
+const store_name = ref('');
+const store_email = ref('');
+const store_address = ref('');
+const phone_number = ref('');
 const password = ref('');
 const confirmPassword = ref('');
-const phone_number = ref('');
 const message = ref('');
 
 const submitForm = async () => {
@@ -19,17 +20,18 @@ const submitForm = async () => {
   }
 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/user/signup/delivery', {
-      username: username.value,
-      email: email.value,
-      password: password.value,
-      phone_number: phone_number.value
+    const response = await axios.post('http://127.0.0.1:8000/user/seller/signup/', {
+      store_name: store_name.value,
+      store_email: store_email.value,
+      store_address: store_address.value,
+      phone_number: phone_number.value,
+      password: password.value
     });
 
     message.value = response.data.message;
-    router.push('/login/delivery');
+    router.push('/seller/login');
   } catch (error) {
-    console.error("Signup Error:", error.response);
+    console.error("Signup Error:", error.response);  // Log error details in console
     message.value = `Error: ${error.response?.data?.detail || error.response?.data || "Something went wrong"}`;
   }
 };
@@ -37,13 +39,14 @@ const submitForm = async () => {
 
 <template>
   <div class="signup-container">
-    <h2>Delivery Partner Sign Up</h2>
+    <h2>Seller Sign Up</h2>
     <form @submit.prevent="submitForm">
-      <input v-model="username" type="text" placeholder="Username" required />
-      <input v-model="email" type="email" placeholder="Email" required />
+      <input v-model="store_name" type="text" placeholder="Store Name" required />
+      <input v-model="store_email" type="email" placeholder="Store Email" required />
       <input v-model="password" type="password" placeholder="Password" required />
       <input v-model="confirmPassword" type="password" placeholder="Confirm Password" required />
       <input v-model="phone_number" type="text" placeholder="Phone Number" required />
+      <textarea v-model="store_address" placeholder="Store Address" required></textarea>
       <button type="submit">Sign Up</button>
     </form>
     <p v-if="message">{{ message }}</p>
@@ -51,27 +54,30 @@ const submitForm = async () => {
 </template>
 
 <style scoped>
+/* Main container */
 .signup-container {
-  width: 100%;
-  max-width: 600px;
-  margin: 5vh auto;
-  padding: 3rem;
-  background: rgb(35, 35, 35);
+  width: 100%; /* Responsive width */
+  max-width: 600px; /* Prevents stretching too wide */
+  margin: 5vh auto; /* Centers the form with space on all sides */
+  padding: 3rem; /* Spacing inside the container */
+  background: rgb(35, 35, 35); /* Slightly greyish background */
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 255, 170, 255);
+  box-shadow: 0 4px 15px rgba(0, 255, 170, 255); /* Faint white shadow */
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
+/* Form layout */
 form {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1rem; /* Equal spacing between elements */
 }
 
-input {
+/* Input fields & Textarea */
+input, textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #666;

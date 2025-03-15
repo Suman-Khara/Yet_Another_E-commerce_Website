@@ -20,7 +20,7 @@ const submitForm = async () => {
   }
 
   try {
-    const response = await axios.post('http://127.0.0.1:8000/user/signup/customer', {
+    const response = await axios.post('http://127.0.0.1:8000/user/customer/signup/', {
       username: username.value,
       email: email.value,
       password: password.value,
@@ -29,7 +29,7 @@ const submitForm = async () => {
     });
 
     message.value = response.data.message;
-    router.push('/login/customer');
+    router.push('/customer/login');  // Redirect to login page
   } catch (error) {
     console.error("Signup Error:", error.response);  // Log error details in console
     message.value = `Error: ${error.response?.data?.detail || error.response?.data || "Something went wrong"}`;

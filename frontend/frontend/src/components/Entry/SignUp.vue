@@ -1,13 +1,13 @@
 <template>
   <div class="signup">
     <h2>Sign Up as:</h2>
-    <router-link to="/signup/customer">
+    <router-link to="/customer/signup">
       <button>Customer</button>
     </router-link>
-    <router-link to="/signup/seller">
+    <router-link to="/seller/signup">
       <button>Seller</button>
     </router-link>
-    <router-link to="/signup/delivery">
+    <router-link to="/delivery/signup">
       <button>Delivery Partner</button>
     </router-link>
   </div>
