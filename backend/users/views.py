@@ -67,3 +67,55 @@ def update_customer_profile(request, username):
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
     except Customer.DoesNotExist:
         return Response({"error": "Customer not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+def seller_signup(request):
+    serializer = SellerSignUpSerializer(data=request.data)
+
+    if serializer.is_valid():
+        seller = serializer.save()
+        # Generate token for the new seller
+        token = SellerToken.objects.create(seller=seller)
+        return Response({"message": "Signup successful!", "token": token.token}, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["POST"])
+def seller_login(request):
+    serializer = SellerLoginSerializer(data=request.data)
+    if serializer.is_valid():
+        return Response(
+            {
+                "token": serializer.validated_data["token"],
+                "store_name": serializer.validated_data["seller"].store_name,
+            },
+            status=status.HTTP_200_OK,
+        )
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+def seller_profile(request, store_name):
+    """Fetch seller profile by store name"""
+    try:
+        seller = Seller.objects.get(store_name=store_name)
+    except Seller.DoesNotExist:
+        return Response({"error": "Seller not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = SellerProfileSerializer(seller)
+    print("Profile Data:", serializer.data)  # Debugging log
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+@api_view(['PUT'])
+def update_seller_profile(request, store_name):
+    """Update seller profile using store_name from URL"""
+    try:
+        seller = Seller.objects.get(store_name=store_name)
+    except Seller.DoesNotExist:
+        return Response({"error": "Seller not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = SellerProfileSerializer(seller, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

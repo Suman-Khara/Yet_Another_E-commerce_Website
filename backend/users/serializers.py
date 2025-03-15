@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import *
+from rest_framework.authtoken.models import Token
 
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,3 +66,61 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = ['username', 'email', 'phone_number', 'address']
+
+class SellerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Seller
+        fields = ['store_name', 'store_email', 'store_address', 'phone_number', 'verified']
+
+class SellerSignUpSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = Seller
+        fields = ['store_name', 'store_email', 'store_address', 'phone_number', 'password']
+
+    def validate_store_email(self, value):
+        """Ensure unique email"""
+        if Seller.objects.filter(store_email=value).exists():
+            raise serializers.ValidationError("A seller with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        """Create a new seller with a hashed password"""
+        password = validated_data.pop('password')
+        seller = Seller(**validated_data)
+        seller.set_password(password)  # Hash password before saving
+        seller.save()
+        return seller
+
+class SellerLoginSerializer(serializers.Serializer):
+    store_email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, data):
+        """Authenticate seller"""
+        email = data.get("store_email")
+        password = data.get("password")
+
+        try:
+            seller = Seller.objects.get(store_email=email)
+        except Seller.DoesNotExist:
+            raise serializers.ValidationError("Invalid email or password.")
+
+        if not seller.check_password(password):
+            raise serializers.ValidationError("Invalid email or password.")
+
+        # Generate or retrieve a custom token for the seller
+        token, _ = SellerToken.objects.get_or_create(seller=seller)
+
+        data["seller"] = seller
+        data["token"] = token.token
+        return data
+
+class SellerProfileSerializer(serializers.ModelSerializer):
+    store_name = serializers.ReadOnlyField()
+    store_email = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Seller
+        fields = ['store_name', 'store_email', 'store_address', 'phone_number', 'verified']
