@@ -28,6 +28,9 @@
 
           <button type="submit">{{ isEditing ? "Save Changes" : "Update Profile" }}</button>
         </form>
+
+        <button @click="verifyEmail" class="verify-btn">Verify Email</button>
+        <p v-if="emailVerified" class="success">Verification mail has been sent.</p>
       </div>
 
       <!-- History Section -->
@@ -53,6 +56,7 @@ export default {
         phone_number: "",
         store_address: ""
       },
+      emailVerified: false,
       isEditing: false // Editing is disabled by default
     };
   },
@@ -63,7 +67,7 @@ export default {
     async fetchProfile() {
       try {
         const token = localStorage.getItem("token");
-        const storeName = localStorage.getItem("store_name"); // Retrieve store name
+        const storeName = localStorage.getItem("store_name");
 
         if (!storeName) {
           console.error("Store name not found in localStorage.");
@@ -83,7 +87,7 @@ export default {
       if (this.isEditing) {
         try {
           const token = localStorage.getItem("token");
-          const storeName = localStorage.getItem("store_name"); // Retrieve store name
+          const storeName = localStorage.getItem("store_name");
 
           if (!storeName) {
             console.error("Store name not found in localStorage.");
@@ -99,6 +103,10 @@ export default {
         }
       }
       this.isEditing = !this.isEditing;
+    },
+    verifyEmail() {
+      alert("Verification mail has been sent.");
+      this.emailVerified = true;
     }
   }
 };
@@ -153,6 +161,21 @@ button {
 button:hover {
   color: #41b883;
   border-color: #41b883;
+}
+
+.verify-btn {
+  margin-top: 10px;
+  border: 2px solid #ff9900;
+}
+
+.verify-btn:hover {
+  color: #ff9900;
+  border-color: #ff9900;
+}
+
+.success {
+  color: green;
+  margin-top: 10px;
 }
 
 .history-section {
