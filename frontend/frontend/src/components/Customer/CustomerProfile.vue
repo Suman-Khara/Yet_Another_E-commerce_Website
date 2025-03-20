@@ -1,45 +1,46 @@
 <template>
-  <div class="profile-container">
-    <h2>Customer Profile</h2>
-    <div class="profile-wrapper">
-      <!-- Left Section: Personal Details -->
-      <div class="personal-details">
-        <form @submit.prevent="toggleEdit">
-          <label>Username</label>
-          <input type="text" v-model="profile.username" disabled class="readonly" />
+  <div>
+    <div class="menu-icon" @click="toggleDrawer">&#9776;</div>
 
-          <label>Email</label>
-          <input type="email" v-model="profile.email" disabled class="readonly" />
+    <!-- Side Drawer -->
+    <div class="side-drawer" v-if="isDrawerOpen">
+      <ul>
+        <li @click="navigateTo('/customer/profile/' + profile.username)">Profile</li>
+        <li @click="navigateTo('/customer/order-history')">Order History</li>
+        <li @click="navigateTo('/customer/cart')">Cart</li>
+        <li @click="navigateTo('/customer/products')">Product List</li>
+        <li @click="logout">Log Out</li>
+      </ul>
+    </div>
+    <!-- Profile Section -->
+    <div class="profile-container">
+      <form @submit.prevent="toggleEdit">
+        <label>Username</label>
+        <input type="text" v-model="profile.username" disabled class="readonly" />
 
-          <label>Phone Number</label>
-          <input
-            type="text"
-            v-model="profile.phone_number"
-            :disabled="!isEditing"
-            :class="{ editable: isEditing, readonly: !isEditing }"
-          />
+        <label>Email</label>
+        <input type="email" v-model="profile.email" disabled class="readonly" />
 
-          <label>Address</label>
-          <textarea
-            v-model="profile.address"
-            :disabled="!isEditing"
-            :class="{ editable: isEditing, readonly: !isEditing }"
-          ></textarea>
+        <label>Phone Number</label>
+        <input
+          type="text"
+          v-model="profile.phone_number"
+          :disabled="!isEditing"
+          :class="{ editable: isEditing, readonly: !isEditing }"
+        />
 
-          <button type="submit">{{ isEditing ? "Save Changes" : "Update Profile" }}</button>
-        </form>
+        <label>Address</label>
+        <textarea
+          v-model="profile.address"
+          :disabled="!isEditing"
+          :class="{ editable: isEditing, readonly: !isEditing }"
+        ></textarea>
 
-        <button @click="verifyEmail" class="verify-btn">Verify Email</button>
-        <p v-if="emailVerified" class="success">Verification mail has been sent.</p>
-      </div>
+        <button type="submit">{{ isEditing ? "Save Changes" : "Update Profile" }}</button>
+      </form>
 
-      <!-- Right Section: History -->
-      <div class="history-section">
-        <h3>History</h3>
-        <div class="history-content">
-          <p>Order history and past actions will be displayed here.</p>
-        </div>
-      </div>
+      <button @click="verifyEmail" class="verify-btn">Verify Email</button>
+      <p v-if="emailVerified" class="success">Verification mail has been sent.</p>
     </div>
   </div>
 </template>
@@ -57,33 +58,23 @@ export default {
         address: ""
       },
       emailVerified: false,
-      isEditing: false // Editing is disabled by default
+      isEditing: false,
+      isDrawerOpen: false
     };
   },
   mounted() {
-    console.log("Current route params:", this.$route.params);
-  },
-  watch: {
-    "$route.params.username": {
-      immediate: true,
-      handler(newUsername) {
-        console.log("Watcher triggered with username:", newUsername);
-        this.fetchProfile();
-      }
-    }
+    this.fetchProfile();
   },
   methods: {
     async fetchProfile() {
       try {
         const token = localStorage.getItem("token");
         const username = this.$route.params.username;
-        console.log("Fetching profile for:", username);
 
         const response = await axios.get(`http://127.0.0.1:8000/user/customer/profile/${username}/`, {
           headers: { Authorization: `Token ${token}` }
         });
 
-        console.log("Profile data received:", response.data);
         this.profile = response.data;
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -91,7 +82,6 @@ export default {
     },
     async toggleEdit() {
       if (this.isEditing) {
-        // Save changes if editing is enabled
         try {
           const token = localStorage.getItem("token");
           await axios.put(`http://127.0.0.1:8000/user/customer/profile/update/${this.profile.username}/`, this.profile, {
@@ -102,35 +92,79 @@ export default {
           console.error("Error updating profile:", error);
         }
       }
-      // Toggle edit mode
       this.isEditing = !this.isEditing;
     },
     verifyEmail() {
       alert("Verification mail has been sent.");
+    },
+    toggleDrawer() {
+      this.isDrawerOpen = !this.isDrawerOpen;
+    },
+    navigateTo(route) {
+      this.$router.push(route);
+      this.isDrawerOpen = false;
+    },
+    logout() {
+      localStorage.removeItem("token");
+      this.$router.push("/login");
     }
   }
 };
 </script>
 
 <style scoped>
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #333;
+  color: white;
+}
+
+.menu-icon {
+  position: absolute;
+  top: 70px;
+  right: 10px;
+  font-size: 2rem; /* Increased size */
+  cursor: pointer;
+}
+
+.side-drawer {
+  position: absolute;
+  top: 110px; /* Slightly below the icon */
+  right: 10px;
+  width: 220px; /* Increased width */
+  background-color: #222;
+  color: white;
+  padding: 1.5rem; /* More padding for better visibility */
+  border-radius: 12px; /* More rounded edges */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Deeper shadow for effect */
+}
+
+.side-drawer ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.side-drawer li {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #444;
+}
+
+.side-drawer li:hover {
+  background-color: #555;
+}
+
 .profile-container {
   width: 90%;
-  max-width: 900px;
+  max-width: 600px;
   margin: 5vh auto;
   padding: 2rem;
   background: rgb(35, 35, 35);
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 255, 170, 255);
-}
-
-.profile-wrapper {
-  display: flex;
-  gap: 20px;
-}
-
-/* Left Section: Personal Details */
-.personal-details {
-  flex: 1;
 }
 
 input, textarea {
@@ -141,14 +175,11 @@ input, textarea {
   border-radius: 5px;
 }
 
-/* Read-only inputs are white */
 .readonly {
   background-color: transparent;
   color: white;
-  border: 1px solid #ccc;
 }
 
-/* Editable inputs turn black when editing is enabled */
 .editable {
   background-color: white;
   color: black;
@@ -196,26 +227,5 @@ button:hover {
 
 .success {
   color: green;
-  margin-top: 10px;
-}
-
-/* Right Section: History */
-.history-section {
-  flex: 1;
-  background: rgb(15, 15, 15);
-  padding: 15px;
-  border-radius: 5px;
-  max-height: 300px;
-  overflow-y: auto; /* Enables scrolling inside the history section */
-}
-
-.history-content {
-  height: 400px; /* Simulating long content to enable scrolling */
-}
-
-@media (max-width: 768px) {
-  .profile-wrapper {
-    flex-direction: column;
-  }
 }
 </style>
