@@ -32,6 +32,20 @@ const filteredProducts = computed(() => {
   })
 })
 
+const username = localStorage.getItem('username')
+console.log('Username:', username)
+const navigateTo = (path) => {
+  if (path.includes('/customer/profile/')) {
+    if (username) {
+      router.push(`/customer/profile/${username}`)
+    } else {
+      console.error('Username not available')
+    }
+  } else {
+    router.push(path)
+  }
+}
+
 const navigateToProduct = (id) => {
   router.push(`/customer/products/${id}`)
 }
@@ -52,7 +66,7 @@ const logout = () => {
     <!-- Side Drawer -->
     <div class="side-drawer" v-if="isDrawerOpen">
       <ul>
-        <li @click="navigateTo('/customer/profile/' + profile.username)">Profile</li>
+        <li @click="navigateTo('/customer/profile/' + username)">Profile</li>
         <li @click="navigateTo('/customer/order-history')">Order History</li>
         <li @click="navigateTo('/customer/cart')">Cart</li>
         <li @click="navigateTo('/customer/products')">Product List</li>
@@ -118,20 +132,20 @@ h2 {
   position: absolute;
   top: 70px;
   right: 10px;
-  font-size: 2rem;
+  font-size: 2rem; /* Increased size */
   cursor: pointer;
 }
 
 .side-drawer {
   position: absolute;
-  top: 110px;
+  top: 110px; /* Slightly below the icon */
   right: 10px;
-  width: 220px;
+  width: 220px; /* Increased width */
   background-color: #222;
   color: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  padding: 1.5rem; /* More padding for better visibility */
+  border-radius: 12px; /* More rounded edges */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Deeper shadow for effect */
 }
 
 .side-drawer ul {
@@ -143,6 +157,10 @@ h2 {
   padding: 12px;
   cursor: pointer;
   border-bottom: 1px solid #444;
+}
+
+.side-drawer li:hover {
+  background-color: #555;
 }
 
 .search-bar {

@@ -1,203 +1,213 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import axios from 'axios';
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import axios from 'axios'
 
-const route = useRoute();
-const product = ref(null);
-const reviews = ref([]);
-const userReview = ref(null);
-const showModal = ref(false);
-const rating = ref(0);
-const comment = ref('');
+const route = useRoute()
+const product = ref(null)
+const errorMessage = ref('')
+const userReview = ref(null)
+const otherReviews = ref([])
+const isReviewModalOpen = ref(false)
+const newRating = ref(0)
+const newComment = ref('')
 
-const fetchData = async () => {
+const fetchProductDetails = async () => {
   try {
-    // Fetch both product details and reviews
-    const [productResponse, reviewsResponse] = await Promise.all([
-      axios.get(`http://127.0.0.1:8000/ecommerce/products/${route.params.id}/`, { withCredentials: true }),
-      axios.get(`http://127.0.0.1:8000/ecommerce/products/${route.params.id}/reviews/`, { withCredentials: true })
-    ]);
-
-    // Product data processing
-    product.value = {
-      ...productResponse.data,
-      seller: { store_name: productResponse.data.seller_name },
-      category: { name: productResponse.data.category_name },
-      tags: productResponse.data.tags.map(tag => ({ name: tag })),
-    };
-
-    // Review data processing
-    reviews.value = reviewsResponse.data.reviews;
-    userReview.value = reviewsResponse.data.user_review;
-
-    if (userReview.value) {
-      rating.value = userReview.value.rating;
-      comment.value = userReview.value.comment;
+    const response = await axios.get(`http://127.0.0.1:8000/ecommerce/products/${route.params.id}/`)
+    product.value = response.data
+    if (response.data.user_review) {
+      userReview.value = response.data.user_review
     }
+    otherReviews.value = response.data.other_reviews
   } catch (error) {
-    console.error('Error fetching data:', error);
+    console.error('Error fetching product details:', error)
+    errorMessage.value = 'Failed to load product details.'
+  }
+}
+
+const addToCart = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.post('http://127.0.0.1:8000/cart/add/', {
+      product_id: product.value.product_id
+    }, {
+      headers: { Authorization: `Token ${token}` },
+      withCredentials: true
+    });
+
+    alert(response.data.message);
+  } catch (error) {
+    if (error.response && error.response.data.error) {
+      alert(error.response.data.error); // Display specific error from the backend
+    } else {
+      console.error('Error adding to cart:', error);
+      alert('Failed to add product to cart.');
+    }
   }
 };
+
+const openReviewModal = () => {
+  isReviewModalOpen.value = true
+  if (userReview.value) {
+    newRating.value = userReview.value.rating
+    newComment.value = userReview.value.comment
+  } else {
+    newRating.value = 0
+    newComment.value = ''
+  }
+}
+
+const setRating = (star) => {
+  newRating.value = star
+}
 
 const submitReview = async () => {
   try {
-    if (userReview.value) {
-      await axios.put(
-        `http://127.0.0.1:8000/ecommerce/products/${route.params.id}/reviews/${userReview.value.customer.username}/`,
-        { rating: rating.value, comment: comment.value },
-        { withCredentials: true }
-      );
-    } else {
-      await axios.post(
-        `http://127.0.0.1:8000/ecommerce/products/${route.params.id}/reviews/`,
-        { rating: rating.value, comment: comment.value },
-        { withCredentials: true }
-      );
-    }
-    await fetchData();
-    showModal.value = false;
+    await axios.post('http://127.0.0.1:8000/ecommerce/products/review/', {
+      product_id: product.value.product_id,
+      rating: newRating.value,
+      comment: newComment.value
+    }, { withCredentials: true })
+    alert('Review submitted successfully!')
+    isReviewModalOpen.value = false
+    // Optionally, re-fetch product details here
   } catch (error) {
-    console.error('Error submitting review:', error);
+    console.error('Error submitting review:', error)
+    alert('Failed to submit review.')
   }
-};
+}
 
-const selectRating = (selectedRating) => {
-  rating.value = selectedRating;
-};
+onMounted(fetchProductDetails)
 
-onMounted(fetchData);
+const testPost = async () => {
+  try {
+    // Change the URL if needed; ensure it matches your Django URL exactly
+    const response = await axios.post('http://127.0.0.1:8000/ecommerce/test/', {
+      sample: 'data',
+      username: localStorage.getItem('username'),
+      product_id: product.value.product_id
+    }, {
+      withCredentials: true,
+      headers: {
+        'Authorization': `Token ${localStorage.getItem('token')}`
+      }
+    })
+    console.log('Response:', response.data)
+    alert('POST request successful! Check the console for details.')
+  } catch (error) {
+    console.error('Error in test POST:', error)
+    alert('Failed to send POST request.')
+  }
+}
 </script>
 
 <template>
+  <div style="padding: 2rem; text-align: center;">
+    <button @click="testPost">Test POST Request</button>
+  </div>
   <div v-if="product" class="container">
-    <div class="product-section">
-      <img :src="product.image_url" alt="Product Image" class="product-image" />
-      <div class="product-details">
-        <h1 class="product-name">{{ product.name }}</h1>
-        <div class="pricing">
-          <span v-if="product.discount" class="old-price">${{ product.price }}</span>
-          <span class="new-price">${{ (product.price * (1 - product.discount / 100)).toFixed(2) }}</span>
-          <span v-if="product.discount" class="discount">({{ product.discount }}% off)</span>
-        </div>
-        <p class="description">{{ product.description }}</p>
-        <p>Category: {{ product.category?.name || 'N/A' }}</p>
-        <p>Tags: {{ product.tags.map(tag => tag.name).join(', ') }}</p>
-        <p>Seller: {{ product.seller.store_name }}</p>
-        <p>In Stock: {{ product.stock }}</p>
-        <p>Rating: {{ product.rating.toFixed(1) }} ★ ({{ product.total_reviews }} Reviews)</p>
+    <div class="product-details">
+      <!-- Left: Product Image -->
+      <img :src="product.image_url || product.thumbnail_url" :alt="product.name" class="product-image" />
+      
+      <!-- Right: Product Info -->
+      <div class="info">
+        <h1>{{ product.name }}</h1>
+        <p v-if="product.discount" class="old-price">${{ product.price }}</p>
+        <p class="new-price">${{ (product.price * (1 - product.discount / 100)).toFixed(2) }} ({{ product.discount }}% off)</p>
+        <p>{{ product.description }}</p>
+        <p><strong>Category:</strong> {{ product.category }}</p>
+        <p><strong>Tags:</strong> {{ product.tags.join(', ') }}</p>
+        <p><strong>Seller:</strong> {{ product.store_name }}</p>
+        <p><strong>Stock:</strong> {{ product.stock }}</p>
+        <p>
+          <strong>Average Rating:</strong> 
+          {{ product.rating }} ★ ({{ product.total_reviews }} Reviews)
+        </p>
+        <button @click="addToCart" class="add-to-cart-btn">Add to Cart</button>
+        <button @click="openReviewModal" class="review-btn">
+          {{ userReview ? 'Edit Your Review' : 'Add Review' }}
+        </button>
+      </div>
+    </div>
 
-        <button @click="showModal = true">{{ userReview ? 'Edit Your Review' : 'Add a Review' }}</button>
+    <!-- User's Review -->
+    <div v-if="userReview" class="review-section">
+      <h3>Your Review</h3>
+      <p><strong>Rating:</strong> {{ userReview.rating }} ★</p>
+      <p>{{ userReview.comment }}</p>
+    </div>
+
+    <!-- Other Reviews -->
+    <div class="review-section">
+      <h3>Other Reviews</h3>
+      <div v-if="otherReviews.length === 0">No reviews yet.</div>
+      <div v-for="review in otherReviews" :key="review.id" class="review-card">
+        <p><strong>{{ review.username }}</strong></p>
+        <p>{{ review.rating }} ★ - <span>{{ new Date(review.created_at).toLocaleDateString() }}</span></p>
+        <p>{{ review.comment }}</p>
       </div>
     </div>
 
     <!-- Review Modal -->
-    <div v-if="showModal" class="modal">
+    <div v-if="isReviewModalOpen" class="modal">
       <div class="modal-content">
-        <h2>{{ userReview ? 'Edit Your Review' : 'Add a Review' }}</h2>
-        <label>Rating: </label>
-        <div class="star-rating">
-          <span v-for="star in 5" :key="star" @click="selectRating(star)">
-            {{ star <= rating ? '★' : '☆' }}
-          </span>
+        <h3>{{ userReview ? 'Edit Your Review' : 'Add Review' }}</h3>
+        
+        <!-- Star Rating System -->
+        <div class="rating-container">
+          <span>{{ newRating }}</span>
+          <div class="stars">
+            <span 
+              v-for="star in 5" 
+              :key="star" 
+              @click="setRating(star)" 
+              :class="{ 'filled': star <= newRating }">
+              ★
+            </span>
+          </div>
         </div>
-        <label>Comment (Optional):</label>
-        <textarea v-model="comment"></textarea>
-        <div class="modal-actions">
+
+        <!-- Comment Section -->
+        <textarea v-model="newComment" placeholder="Leave a comment (optional)" />
+
+        <!-- Action Buttons -->
+        <div class="buttons">
           <button @click="submitReview">Submit</button>
-          <button @click="showModal = false">Cancel</button>
+          <button @click="isReviewModalOpen = false">Cancel</button>
         </div>
       </div>
     </div>
 
-    <!-- Reviews Section -->
-    <div class="reviews-section">
-      <h3>Reviews</h3>
-      <div v-if="userReview" class="review-card your-review">
-        <strong>You</strong>
-        <p>Rating: {{ userReview.rating }} ★</p>
-        <p>{{ userReview.comment }}</p>
-      </div>
-
-      <div v-for="review in reviews" :key="review.id" class="review-card">
-        <strong>{{ review.user.username }}</strong>
-        <p>Rating: {{ review.rating }} ★</p>
-        <p class="review-date">{{ new Date(review.created_at).toLocaleDateString() }}</p>
-        <p>{{ review.comment }}</p>
-      </div>
-    </div>
   </div>
+  
+  <p v-if="errorMessage">{{ errorMessage }}</p>
 </template>
 
 <style scoped>
 .container {
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
+  padding: 2rem;
 }
 
-.product-section {
+.product-details {
   display: flex;
-  gap: 30px;
+  gap: 2rem;
 }
 
 .product-image {
   width: 400px;
   height: 400px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
-.product-details {
+.info {
   flex: 1;
 }
 
-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background-color: #333;
-  color: white;
-  padding: 30px;
-  border-radius: 10px;
-  width: 400px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-}
-
-.star-rating span {
-  font-size: 24px;
-  cursor: pointer;
-}
-
-.star-rating span:hover {
-  color: gold;
+h1 {
+  font-size: 2.5rem;
 }
 
 .old-price {
@@ -206,8 +216,104 @@ button:hover {
 }
 
 .new-price {
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-size: 1.5rem;
   color: green;
 }
+
+button {
+  background: transparent; /* No default background */
+  border: 2px solid #41b883; /* Vue green border */
+  padding: 10px;
+  font-size: 16px;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Fira Sans',
+    'Droid Sans',
+    'Helvetica Neue',
+    sans-serif;
+  color: white; /* Default text color */
+  cursor: pointer;
+  transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+  border-radius: 5px;
+  width: 100%;
+}
+
+button:hover {
+  color: #b3a100; /* Change text color on hover */
+  border-color: #b3a100; /* Keep border color consistent */
+}
+
+.review-section {
+  margin-top: 3rem;
+}
+
+.review-card {
+  background: #f0f0f038;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background: transparent;
+  padding: 2rem;
+  width: 400px;
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 20px #b3a100;
+  text-align: center;
+}
+
+.rating-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.stars span {
+  font-size: 30px;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.stars span.filled {
+  color: #ffd700;
+}
+
+textarea {
+  width: 100%;
+  height: 100px;
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid white;
+  border-radius: 8px;
+  padding: 1rem;
+  color: white;
+}
+
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 </style>

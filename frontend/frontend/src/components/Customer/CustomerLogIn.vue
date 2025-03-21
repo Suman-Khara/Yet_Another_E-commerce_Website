@@ -32,6 +32,7 @@ export default {
         console.log(response.data);
         // Store token in localStorage or Vuex for authentication
         localStorage.setItem("token", response.data.token);
+        localStorage.setItem("username", response.data.username);
         this.$router.push(`/customer/profile/${response.data.username}`);
       } catch (err) {
         this.error = "Invalid email or password";

@@ -28,6 +28,9 @@ class Product(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.seller.store_name}"
+    
+    def discounted_price(self):
+        return round(self.price* (1- self.discount/100), 2)
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
@@ -82,3 +85,21 @@ class OrderHistory(models.Model):
 
     def __str__(self):
         return f"History for Order {self.order.order_id} - {self.status}"
+
+class CheckoutOrder(models.Model):
+    PAYMENT_MODES = [
+        ('UPI', 'UPI'),
+        ('COD', 'Cash on Delivery'),
+        ('CARD', 'Card')
+    ]
+
+    order_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    items = models.JSONField()  # Stores items as JSON with product names and counts
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    address = models.TextField()
+    payment_mode = models.CharField(max_length=10, choices=PAYMENT_MODES)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Order {self.order_id} by {self.customer.user.username}"

@@ -3,9 +3,15 @@ from rest_framework import generics
 from django.db.models import Q
 from .models import *
 from .serializers import *
-from rest_framework import views, response, status
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from users.models import *
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
+from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 class ProductListView(generics.ListAPIView):
@@ -28,51 +34,52 @@ class ProductListView(generics.ListAPIView):
         
         return queryset
 
-class ProductDetailView(views.APIView):
-    permission_classes = [IsAuthenticated]
-
+class ProductDetailView(APIView):
     def get(self, request, product_id):
-        try:
-            product = Product.objects.get(product_id=product_id)
-            product_data = ProductSerializer(product).data
-            reviews = Review.objects.filter(product=product)
-            reviews_data = ReviewSerializer(reviews, many=True).data
+        product = get_object_or_404(Product, product_id=product_id)
+        serializer = ProductDetailSerializer(product, context={'request': request})
+        return Response(serializer.data)
 
-            # Check if the user has a review for this product
-            user_review = reviews.filter(user=request.user.customer).first()
-            user_review_data = ReviewSerializer(user_review).data if user_review else None
+class AddToCartView(APIView):
+    def post(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'User not authenticated'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            return response.Response({
-                'product': product_data,
-                'reviews': reviews_data,
-                'user_review': user_review_data
-            }, status=status.HTTP_200_OK)
-        except Product.DoesNotExist:
-            return response.Response({'error': 'Product not found'}, status=status.HTTP_404_NOT_FOUND)
-
-# Review Views
-class ReviewListCreateView(generics.ListCreateAPIView):
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        product_id = self.kwargs['product_id']
-        return Review.objects.filter(product__product_id=product_id)
-
-    def perform_create(self, serializer):
-        product = Product.objects.get(product_id=self.kwargs['product_id'])
-        serializer.save(user=self.request.user.customer, product=product)
-
-class ReviewUpdateView(generics.RetrieveUpdateAPIView):
-    serializer_class = ReviewSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_object(self):
-        product_id = self.kwargs['product_id']
-        username = self.kwargs['username']
-
-        # Ensure only the user can update their own review
-        if self.request.user.username != username:
-            raise PermissionDenied("You cannot update this review.")
+        product_id = request.data.get('product_id')
+        product = get_object_or_404(Product, product_id=product_id)
         
-        return Review.objects.get(product__product_id=product_id, user__user__username=username)
+        if product.stock < 1:
+            return Response({'error': 'Product is out of stock'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get or create the customer's cart
+        customer = user.customer
+        cart, created = Cart.objects.get_or_create(user=customer)
+
+        # Get or create a CartItem for the product in the cart
+        cart_item, item_created = CartItem.objects.get_or_create(cart=cart, product=product, defaults={'quantity': 1})
+        if not item_created:
+            # If the cart item already exists, increase the quantity
+            cart_item.quantity += 1
+            cart_item.save()
+
+        return Response({'message': 'Product added to cart successfully'}, status=status.HTTP_200_OK)
+
+@csrf_exempt
+@api_view(['POST'])
+def test_post(request):
+    # Simply echo back the received data
+    data = request.data
+    print("Received data:", data)
+    return Response({'message': 'Test successful!', 'data_received': data}, status=status.HTTP_200_OK)
+
+@csrf_exempt  # For testing purposes; remove in production if CSRF is properly handled
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def submit_review(request):
+    serializer = SubmitReviewSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'message': 'Review submitted successfully.'}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
