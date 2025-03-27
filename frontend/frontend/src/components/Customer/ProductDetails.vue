@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-
+const isDrawerOpen = ref(false)
 const route = useRoute()
 const product = ref(null)
 const errorMessage = ref('')
@@ -11,6 +11,20 @@ const otherReviews = ref([])
 const isReviewModalOpen = ref(false)
 const newRating = ref(0)
 const newComment = ref('')
+const router = useRouter()
+const username = localStorage.getItem('username')
+console.log('Username:', username)
+const navigateTo = (path) => {
+  if (path.includes('/customer/profile/')) {
+    if (username) {
+      router.push(`/customer/profile/${username}`)
+    } else {
+      console.error('Username not available')
+    }
+  } else {
+    router.push(path)
+  }
+}
 
 const fetchProductDetails = async () => {
   try {
@@ -103,8 +117,16 @@ const testPost = async () => {
 </script>
 
 <template>
-  <div style="padding: 2rem; text-align: center;">
-    <button @click="testPost">Test POST Request</button>
+  <div class="menu-icon" @click="isDrawerOpen = !isDrawerOpen">☰</div>
+  <!-- Side Drawer -->
+  <div class="side-drawer" v-if="isDrawerOpen">
+    <ul>
+      <li @click="navigateTo('/customer/profile/' + username)">Profile</li>
+      <li @click="navigateTo('/customer/order-history')">Order History</li>
+      <li @click="navigateTo('/customer/cart')">Cart</li>
+      <li @click="navigateTo('/customer/products')">Product List</li>
+      <li @click="logout">Log Out</li>
+    </ul>
   </div>
   <div v-if="product" class="container">
     <div class="product-details">
@@ -314,6 +336,41 @@ textarea {
 
 textarea::placeholder {
   color: rgba(255, 255, 255, 0.5);
+}
+
+.menu-icon {
+  position: absolute;
+  top: 70px;
+  right: 10px;
+  font-size: 2rem; /* Increased size */
+  cursor: pointer;
+}
+
+.side-drawer {
+  position: absolute;
+  top: 110px; /* Slightly below the icon */
+  right: 10px;
+  width: 220px; /* Increased width */
+  background-color: #222;
+  color: white;
+  padding: 1.5rem; /* More padding for better visibility */
+  border-radius: 12px; /* More rounded edges */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Deeper shadow for effect */
+}
+
+.side-drawer ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.side-drawer li {
+  padding: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #444;
+}
+
+.side-drawer li:hover {
+  background-color: #555;
 }
 
 </style>

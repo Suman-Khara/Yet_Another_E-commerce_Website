@@ -5,6 +5,9 @@ from rest_framework.response import Response
 from .models import *
 from ecommerce.models import Product
 from django.shortcuts import get_object_or_404
+from rest_framework.views import APIView
+from rest_framework import status
+from ecommerce.models import *
 
 # Create your views here.
 @api_view(['POST'])
@@ -93,3 +96,52 @@ def remove_from_cart(request):
     CartItem.objects.filter(cart=cart, product=product).delete()
 
     return Response({"message": "Item removed from cart."})
+
+class CheckoutView(APIView):
+    def post(self, request):
+        user = request.user
+        customer = user.customer
+        address = request.data.get('address')
+        payment_mode = request.data.get('payment_mode')
+
+        if not address or payment_mode not in ['UPI', 'COD', 'CARD']:
+            return Response({'error': 'Invalid address or payment mode.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cart = Cart.objects.get(user=customer)
+            cart_items = CartItem.objects.filter(cart=cart)
+
+            if not cart_items.exists():
+                return Response({'error': 'Cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            items_data = []
+            total_amount = 0
+
+            # Check stock and calculate total
+            for item in cart_items:
+                product = item.product
+                if item.quantity > product.stock:
+                    return Response({'error': f'Only {product.stock} of {product.name} available.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                product.stock -= item.quantity
+                product.save()
+                items_data.append({'product_name': product.name, 'count': item.quantity})
+                total_amount += product.price * item.quantity
+
+            # Create CheckoutOrder
+            CheckoutOrder.objects.create(
+                customer=customer,
+                items=items_data,
+                total_amount=total_amount,
+                address=address,
+                payment_mode=payment_mode
+            )
+
+            # Clear Cart and CartItems
+            cart_items.delete()
+            cart.delete()
+
+            return Response({'message': 'Order placed successfully!'}, status=status.HTTP_201_CREATED)
+        
+        except Cart.DoesNotExist:
+            return Response({'error': 'Cart not found.'}, status=status.HTTP_404_NOT_FOUND)

@@ -83,3 +83,18 @@ def submit_review(request):
         serializer.save()
         return Response({'message': 'Review submitted successfully.'}, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_history(request):
+    customer = request.user.customer
+    orders = CheckoutOrder.objects.filter(customer=customer).order_by('-created_at')
+    data = [{
+        'order_id': str(order.order_id),
+        'items': order.items,
+        'total_amount': order.total_amount,
+        'address': order.address,
+        'payment_mode': order.payment_mode,
+        'created_at': order.created_at
+    } for order in orders]
+    return Response({'orders': data})
